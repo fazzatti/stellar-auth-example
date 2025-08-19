@@ -14,6 +14,8 @@
 
 2. Update `.env` with your configuration.
 
+**Important:** Make sure the accounts you're using are initialized on-chain. For testnet, this can be done with the Friendbot in [Stellar Lab](https://lab.stellar.org/).
+
 ## Usage
 
 Use the commands below to run each example or utility.
