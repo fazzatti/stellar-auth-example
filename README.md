@@ -32,7 +32,7 @@ deno task simulated-source-account
 
 #### Source Account Example without Simulation
 
-This example builds a smart contract transaction without using the RPC or the simulation step. This transaction is configured in a way that **requires only a source-account authorization**.
+This example builds a smart contract transaction **without using the RPC or the simulation step**. This transaction is configured in a way that **requires only a source-account authorization**.
 
 ```bash
 deno task no-simulation-source-account
@@ -44,6 +44,14 @@ This example builds a smart contract transaction using the RPC to simulate its e
 
 ```bash
 deno task simulated-auth-entries
+```
+
+#### Authorization Entries Example without Simulation
+
+This example builds a smart contract transaction **without using the RPC or the simulation step**. This transaction is configured in a way that **requires signing individual authorization entries**.
+
+```bash
+deno task no-simulation-auth-entries
 ```
 
 ### Utilities
