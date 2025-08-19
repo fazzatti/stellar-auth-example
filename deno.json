@@ -4,8 +4,7 @@
     "simulated-source-account": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/simulated-source-account.ts",
     "simulated-auth-entries": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/simulated-auth-entries.ts",
     "current-sequence": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/current-sequence.ts",
-    "send-tx": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/send-transaction.ts",
-    "dev": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi src/main.ts"
+    "send-tx": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/send-transaction.ts"
   },
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window", "deno.worker"],
