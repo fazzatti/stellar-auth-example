@@ -19,6 +19,11 @@ rpc
     if (reply.status !== "PENDING") {
       throw reply;
     }
+    ``;
+
+    console.log(
+      `Transaction sent, waiting for confirmation... \nHash: ${reply.hash}`
+    );
 
     return rpc.pollTransaction(reply.hash, {
       sleepStrategy: (_iter: number) => 1000,
@@ -33,7 +38,7 @@ rpc
           `Transaction failed with status: ${finalStatus.status}`
         );
       case Api.GetTransactionStatus.SUCCESS:
-        console.log("Transaction succeeded:", finalStatus.txHash);
+        console.log("Transaction succeeded!");
         return finalStatus.status;
     }
   })
@@ -41,5 +46,5 @@ rpc
     console.log("Success! Results:", result);
   })
   .catch(function (error) {
-    console.error("Something went wrong!", error);
+    console.error("Something went wrong for transaction!", error);
   });
