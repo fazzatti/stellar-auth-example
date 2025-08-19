@@ -10,8 +10,7 @@ import {
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { config, rpc } from "./config/env.ts";
-import { Api } from "stellar-sdk/rpc";
+import { config } from "./config/env.ts";
 import { Buffer } from "buffer";
 
 const {

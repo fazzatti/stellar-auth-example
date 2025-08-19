@@ -14,13 +14,7 @@ import { Api } from "stellar-sdk/rpc";
 
 const { swapDemo, validUntilLedgerSeq, stellarNetwork } = config;
 
-const {
-  issuer: sourceKeys,
-  user,
-  swapContractId: contractId,
-  assetA,
-  assetB,
-} = swapDemo;
+const { issuer: sourceKeys, user, swapContractId: contractId } = swapDemo;
 
 // ===================================================
 // Encode the arguments for a 'swap' invocation
@@ -28,7 +22,6 @@ const {
 //
 
 const isSellAssetA = true;
-const sellAsset = isSellAssetA ? assetA : assetB;
 
 // Bollean to indicate if the swap is for asset A or B
 const scValIsSellAssetA = nativeToScVal(isSellAssetA, {
