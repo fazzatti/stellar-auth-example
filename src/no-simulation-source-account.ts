@@ -72,7 +72,6 @@ const toAccountLedgerEntry = xdr.LedgerKey.account(
   })
 );
 
-xdr.ScContractInstance;
 const readOnlyEntries: xdr.LedgerKey[] = [contractInstanceLedgerEntry];
 
 const readWriteEntries: xdr.LedgerKey[] = [
