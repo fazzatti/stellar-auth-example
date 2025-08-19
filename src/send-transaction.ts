@@ -22,12 +22,12 @@ rpc
     ``;
 
     console.log(
-      `Transaction sent, waiting for confirmation... \nHash: ${reply.hash}`
+      `Transaction sent! \nHash: ${reply.hash} \nwaiting for confirmation...`
     );
 
     return rpc.pollTransaction(reply.hash, {
-      sleepStrategy: (_iter: number) => 1000,
-      attempts: 5,
+      sleepStrategy: (_iter: number) => 500,
+      attempts: 20,
     });
   })
   .then((finalStatus) => {
@@ -46,5 +46,5 @@ rpc
     console.log("Success! Results:", result);
   })
   .catch(function (error) {
-    console.error("Something went wrong for transaction!", error);
+    console.error("Something went wrong!", error);
   });
