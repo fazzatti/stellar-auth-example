@@ -1,5 +1,5 @@
 import { Api } from "stellar-sdk/rpc";
-import { args, config, rpc } from "./config/env.ts";
+import { args, config, rpc } from "../config/env.ts";
 import { TransactionBuilder } from "stellar-sdk";
 
 const { stellarNetwork } = config;

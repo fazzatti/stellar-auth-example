@@ -1,4 +1,4 @@
-import { config, rpc } from "./config/env.ts";
+import { config, rpc } from "../config/env.ts";
 
 const { sourceAccountKeypair: sourceKeys } = config;
 
