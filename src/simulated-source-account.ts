@@ -10,10 +10,8 @@ import {
 } from "@stellar/stellar-sdk";
 import { config, rpc } from "./config/env.ts";
 
-const {
-  destinationAccountPublicKey: destinationPublicKey,
-  sourceAccountKeypair: sourceKeys,
-} = config;
+const { accountCPublicKey: destinationPublicKey, accountAKeypair: sourceKeys } =
+  config;
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation

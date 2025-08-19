@@ -12,13 +12,12 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 import { config } from "./config/env.ts";
-import { Api } from "stellar-sdk/rpc";
 
 const {
-  destinationAccountPublicKey: destinationPublicKey,
-  sourceAccountKeypair: sourceKeys,
-  sourceAccountSequenceNumber,
-  senderAccountKeypair: senderKeys,
+  accountCPublicKey: destinationPublicKey,
+  accountAKeypair: sourceKeys,
+  accountASequenceNumber: sourceAccountSequenceNumber,
+  accountBKeypair: senderKeys,
   stellarNetwork,
   validUntilLedgerSeq,
 } = config;

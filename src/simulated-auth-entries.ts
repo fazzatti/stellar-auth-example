@@ -14,9 +14,9 @@ import { config, rpc } from "./config/env.ts";
 import { Api } from "stellar-sdk/rpc";
 
 const {
-  destinationAccountPublicKey: destinationPublicKey,
-  sourceAccountKeypair: sourceKeys,
-  senderAccountKeypair: senderKeys,
+  accountCPublicKey: destinationPublicKey,
+  accountAKeypair: sourceKeys,
+  accountBKeypair: senderKeys,
   stellarNetwork,
   validUntilLedgerSeq,
 } = config;

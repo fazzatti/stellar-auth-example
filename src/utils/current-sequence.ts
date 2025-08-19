@@ -1,6 +1,6 @@
 import { config, rpc } from "../config/env.ts";
 
-const { sourceAccountKeypair: sourceKeys } = config;
+const { accountAKeypair: sourceKeys } = config;
 
 try {
   const sourceAccount = await rpc.getAccount(sourceKeys.publicKey());

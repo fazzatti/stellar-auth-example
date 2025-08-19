@@ -13,9 +13,9 @@ import {
 import { config } from "./config/env.ts";
 
 const {
-  destinationAccountPublicKey: destinationPublicKey,
-  sourceAccountKeypair: sourceKeys,
-  sourceAccountSequenceNumber,
+  accountCPublicKey: destinationPublicKey,
+  accountAKeypair: sourceKeys,
+  accountASequenceNumber: sourceAccountSequenceNumber,
 } = config;
 
 // ===================================================
