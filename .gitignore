@@ -1,0 +1,41 @@
+# Environment variables
+.env
+
+# Deno
+.deno/
+deno.lock
+
+# Node modules (if using npm dependencies)
+node_modules/
+
+# IDE/Editor files
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Temporary files
+*.tmp
+*.temp
+
+#files
+output.csv
+keys.csv
