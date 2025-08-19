@@ -2,10 +2,14 @@
   "tasks": {
     "no-simulation-source-account": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/no-simulation-source-account.ts",
     "simulated-source-account": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/simulated-source-account.ts",
-    "simulated-auth-entries": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/simulated-auth-entries.ts",
     "no-simulation-auth-entries": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/no-simulation-auth-entries.ts",
+    "simulated-auth-entries": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/simulated-auth-entries.ts",
+    "no-simulation-swap": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/no-simulation-swap.ts",
+    "simulated-swap": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/simulated-swap.ts",
     "current-sequence": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/current-sequence.ts",
-    "send-tx": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/send-transaction.ts"
+    "send-tx": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/send-transaction.ts",
+    "deploy": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/deploy-contract.ts",
+    "fund-user": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/fund-account.ts"
   },
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window", "deno.worker"],

@@ -1,4 +1,4 @@
-import { Keypair, Networks } from "@stellar/stellar-sdk";
+import { Asset, Keypair, Networks } from "@stellar/stellar-sdk";
 import { Server } from "stellar-sdk/rpc";
 
 /**
@@ -9,11 +9,19 @@ export interface Config {
   stellarNetwork: Networks;
   stellarRpcUrl: string;
 
-  sourceAccountKeypair: Keypair;
-  sourceAccountSequenceNumber: string;
-  destinationAccountPublicKey: string;
-  senderAccountKeypair: Keypair;
+  accountAKeypair: Keypair;
+  accountASequenceNumber: string;
+  accountBKeypair: Keypair;
+  accountCPublicKey: string;
   validUntilLedgerSeq: number;
+  swapDemo: {
+    assetA: Asset;
+    assetB: Asset;
+    issuer: Keypair;
+    user: Keypair;
+    swapContractId: string;
+    swapContractWasmHash: string;
+  };
 }
 
 export interface Args {
@@ -48,14 +56,14 @@ if (!(networkKey in Networks)) {
 
 const stellarNetwork = Networks[networkKey as keyof typeof Networks];
 
-const sourceAccountKeypair = Keypair.fromSecret(
-  getRequiredEnv("SOURCE_SECRET_KEY")
+const accountAKeypair = Keypair.fromSecret(
+  getRequiredEnv("ACCOUNT_A_SECRET_KEY")
 );
-const senderAccountKeypair = Keypair.fromSecret(
-  getRequiredEnv("ANOTHER_SENDER_SECRET_KEY")
+const accountBKeypair = Keypair.fromSecret(
+  getRequiredEnv("ACCOUNT_B_SECRET_KEY")
 );
-const sourceAccountSequenceNumber = getRequiredEnv("SOURCE_SEQUENCE_NUMBER");
-const destinationAccountPublicKey = getRequiredEnv("DESTINATION_PUBLIC_KEY");
+const accountASequenceNumber = getRequiredEnv("ACCOUNT_A_SEQUENCE_NUMBER");
+const accountCPublicKey = getRequiredEnv("ACCOUNT_C_PUBLIC_KEY");
 const stellarRpcUrl = getRequiredEnv("STELLAR_RPC_URL");
 const validUntilLedgerSeqEnvRaw = getRequiredEnv("VALID_UNTIL_LEDGER_SEQ");
 let validUntilLedgerSeq: number;
@@ -67,16 +75,32 @@ try {
   throw error;
 }
 
+const swapContractId = getRequiredEnv("SWAP_CONTRACT_ID");
+const swapContractWasmHash = getRequiredEnv("SWAP_CONTRACT_WASM_HASH");
+
+const issuer = accountAKeypair;
+const user = accountBKeypair;
+const assetA = new Asset("ASSETA", issuer.publicKey());
+const assetB = new Asset("ASSETB", issuer.publicKey());
+
 export const rpc = new Server(stellarRpcUrl, { allowHttp: true });
 
 export const config: Config = {
   stellarNetwork,
   stellarRpcUrl,
-  sourceAccountKeypair,
-  sourceAccountSequenceNumber,
-  destinationAccountPublicKey,
-  senderAccountKeypair,
+  accountAKeypair,
+  accountASequenceNumber,
+  accountCPublicKey,
+  accountBKeypair,
   validUntilLedgerSeq,
+  swapDemo: {
+    assetA,
+    assetB,
+    issuer,
+    user,
+    swapContractId,
+    swapContractWasmHash,
+  },
 };
 
 // Log the loaded configuration
@@ -84,15 +108,10 @@ console.log(`\n------------------------------------------------------------`);
 console.log(`Loaded configuration from environment variables:`);
 console.log(`Using Stellar Network: ${config.stellarNetwork}`);
 console.log(`RPC URL: ${config.stellarRpcUrl}`);
-console.log(
-  `Source Account Public Key: ${config.sourceAccountKeypair.publicKey()}`
-);
-console.log(
-  `Source Account Sequence Number: ${config.sourceAccountSequenceNumber}`
-);
-console.log(
-  `Destination Account Public Key: ${config.destinationAccountPublicKey}`
-);
+console.log(`Account A Public Key: ${config.accountAKeypair.publicKey()}`);
+console.log(`Account A Sequence Number: ${config.accountASequenceNumber}`);
+console.log(`Account B Public Key: ${config.accountBKeypair.publicKey()}`);
+console.log(`Account C Public Key: ${config.accountCPublicKey}`);
 console.log(`------------------------------------------------------------\n`);
 
 // Parse command line arguments
