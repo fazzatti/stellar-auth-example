@@ -1,14 +1,9 @@
-import { args, config } from "../config/env.ts";
+import { stellarNetwork } from "../config/env.ts";
 import { TransactionBuilder } from "stellar-sdk";
 import { sendTransaction } from "./send-transaction-fn.ts";
+import { readTransactionXdr } from "./io.ts";
 
-const { stellarNetwork } = config;
-const { tx } = args;
-
-if (!tx) {
-  throw new Error("Transaction XDR (--tx) is required");
-}
-
+const tx = await readTransactionXdr();
 const transaction = TransactionBuilder.fromXDR(tx, stellarNetwork);
 
 console.log("Submitting transaction...");

@@ -4,22 +4,20 @@ import {
   Asset,
   authorizeEntry,
   nativeToScVal,
-  Networks,
   Operation,
   TimeoutInfinite,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { config, rpc } from "./config/env.ts";
-import { Api } from "stellar-sdk/rpc";
 
-const {
-  accountCPublicKey: destinationPublicKey,
-  accountAKeypair: sourceKeys,
-  accountBKeypair: senderKeys,
-  stellarNetwork,
-  validUntilLedgerSeq,
-} = config;
+import { Api } from "stellar-sdk/rpc";
+import { getRpc, getSimpleAuthEntryConfig } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/io.ts";
+
+const { network, validUntilLedgerSeq, sourceKeys, senderKeys, receiverPk } =
+  getSimpleAuthEntryConfig();
+
+const rpc = getRpc();
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation
@@ -30,7 +28,7 @@ const xlm = Asset.native();
 const fromAddress = nativeToScVal(senderKeys.publicKey(), {
   type: "address",
 });
-const toAddress = nativeToScVal(destinationPublicKey, {
+const toAddress = nativeToScVal(receiverPk, {
   type: "address",
 });
 const amount = nativeToScVal(BigInt(10_0000000), {
@@ -60,11 +58,11 @@ try {
 // ===================================================
 const tx = new TransactionBuilder(sourceAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.invokeContractFunction({
-      contract: xlm.contractId(Networks.TESTNET),
+      contract: xlm.contractId(network),
       function: "transfer",
       args,
     })
@@ -116,8 +114,8 @@ for (const entry of entries) {
       await authorizeEntry(
         entry,
         senderKeys,
-        validUntilLedgerSeq,
-        stellarNetwork
+        Number(validUntilLedgerSeq),
+        network
       )
     );
     continue;
@@ -162,7 +160,7 @@ const updatedSourceAccount = new Account(
 
 const updatedTx = new TransactionBuilder(updatedSourceAccount, {
   fee: (inclusionFee + resourceFee).toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
   sorobanData: transactionData,
   timebounds: tx.timeBounds,
   minAccountSequence: tx.minAccountSequence,
@@ -177,3 +175,5 @@ const finalTx = updatedTx.build();
 finalTx.sign(sourceKeys);
 
 console.log("Signed Transaction:\n\n", finalTx.toXDR(), "\n\n");
+
+saveTransactionXdr(finalTx.toXDR());

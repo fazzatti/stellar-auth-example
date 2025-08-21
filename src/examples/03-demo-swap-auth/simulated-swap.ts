@@ -3,18 +3,18 @@ import {
   Address,
   authorizeEntry,
   nativeToScVal,
-  Networks,
   Operation,
   TimeoutInfinite,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { config, rpc } from "./config/env.ts";
+import { getDemoSwapAuthConfig, getRpc } from "../../config/env.ts";
 import { Api } from "stellar-sdk/rpc";
+import { saveTransactionXdr } from "../../utils/io.ts";
 
-const { swapDemo, validUntilLedgerSeq, stellarNetwork } = config;
-
-const { issuer: sourceKeys, user, swapContractId: contractId } = swapDemo;
+const { network, sourceKeys, userKeys, contractId, validUntilLedgerSeq } =
+  getDemoSwapAuthConfig();
+const rpc = getRpc();
 
 // ===================================================
 // Encode the arguments for a 'swap' invocation
@@ -29,7 +29,7 @@ const scValIsSellAssetA = nativeToScVal(isSellAssetA, {
 });
 
 // The address of the account performing the swap
-const scValuAccount = nativeToScVal(user.publicKey(), {
+const scValuAccount = nativeToScVal(userKeys.publicKey(), {
   type: "address",
 });
 
@@ -63,7 +63,7 @@ try {
 // ===================================================
 const tx = new TransactionBuilder(sourceAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.invokeContractFunction({
@@ -113,10 +113,15 @@ for (const entry of entries) {
   }
 
   // look for our user authorization entry and sign it
-  if (requiredSigner === user.publicKey()) {
+  if (requiredSigner === userKeys.publicKey()) {
     console.log("Signing for required signer:", requiredSigner);
     signedEntries.push(
-      await authorizeEntry(entry, user, validUntilLedgerSeq, stellarNetwork)
+      await authorizeEntry(
+        entry,
+        userKeys,
+        Number(validUntilLedgerSeq),
+        network
+      )
     );
     continue;
   }
@@ -160,7 +165,7 @@ const updatedSourceAccount = new Account(
 
 const updatedTx = new TransactionBuilder(updatedSourceAccount, {
   fee: (inclusionFee + resourceFee).toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
   sorobanData: transactionData,
   timebounds: tx.timeBounds,
   minAccountSequence: tx.minAccountSequence,
@@ -175,3 +180,5 @@ const finalTx = updatedTx.build();
 finalTx.sign(sourceKeys);
 
 console.log("Signed Transaction:\n\n", finalTx.toXDR(), "\n\n");
+
+saveTransactionXdr(finalTx.toXDR());

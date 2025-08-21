@@ -2,12 +2,11 @@ import {
   Account,
   Address,
   nativeToScVal,
-  Networks,
   Operation,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { config, rpc } from "../config/env.ts";
+import { getDemoSwapContractDeployConfig, getRpc } from "../config/env.ts";
 import { loadWasmFile } from "./load-wasm.ts";
 import { sendTransaction } from "./send-transaction-fn.ts";
 import { Buffer } from "buffer";
@@ -17,13 +16,15 @@ const wasm = await loadWasmFile(
   "./target/wasm32v1-none/release/simple_swap.wasm"
 );
 
-const { assetA, assetB, issuer } = config.swapDemo;
+const { network, assetA, assetB, issuerKeys } =
+  getDemoSwapContractDeployConfig();
+const rpc = getRpc();
 
 const inclusionFee = 1000;
 
 let issuerAccount: Account;
 try {
-  issuerAccount = await rpc.getAccount(issuer.publicKey());
+  issuerAccount = await rpc.getAccount(issuerKeys.publicKey());
 } catch (error) {
   console.error("Error checking source account:", error);
   throw error;
@@ -32,7 +33,7 @@ try {
 console.log("Uploading WASM...");
 const uploadWasmtx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.uploadContractWasm({
@@ -44,7 +45,7 @@ const uploadWasmtx = new TransactionBuilder(issuerAccount, {
 
 const uploadWasmtxPrep = await rpc.prepareTransaction(uploadWasmtx);
 
-uploadWasmtxPrep.sign(issuer);
+uploadWasmtxPrep.sign(issuerKeys);
 
 const uploadResult = await sendTransaction(uploadWasmtxPrep);
 
@@ -60,10 +61,10 @@ console.log("WASM uploaded with hash:", wasmHash);
 
 console.log("Deploying contract...");
 
-const scValAssetA = nativeToScVal(assetA.contractId(config.stellarNetwork), {
+const scValAssetA = nativeToScVal(assetA.contractId(network), {
   type: "address",
 });
-const scValAssetB = nativeToScVal(assetB.contractId(config.stellarNetwork), {
+const scValAssetB = nativeToScVal(assetB.contractId(network), {
   type: "address",
 });
 
@@ -71,11 +72,11 @@ const constructorArgs: xdr.ScVal[] = [scValAssetA, scValAssetB];
 
 const deployTx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.createCustomContract({
-      address: new Address(issuer.publicKey()),
+      address: new Address(issuerKeys.publicKey()),
       wasmHash: Buffer.from(wasmHash!, "hex"),
       salt: generateRandomSalt(),
 
@@ -87,7 +88,7 @@ const deployTx = new TransactionBuilder(issuerAccount, {
 
 const deployTxPrep = await rpc.prepareTransaction(deployTx);
 
-deployTxPrep.sign(issuer);
+deployTxPrep.sign(issuerKeys);
 
 const deployResult = await sendTransaction(deployTxPrep);
 
@@ -105,7 +106,7 @@ console.log("Wrapping Asset A...");
 
 const wrapAssetATx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.createStellarAssetContract({
@@ -130,7 +131,7 @@ const wrapAssetATxPrep = await rpc
 // Only submit the transaction if it was prepared successfully
 // otherwise, skip since it is already wrapped
 if (wrapAssetATxPrep) {
-  wrapAssetATxPrep.sign(issuer);
+  wrapAssetATxPrep.sign(issuerKeys);
   await sendTransaction(wrapAssetATxPrep);
   console.log("Asset A wrapped");
 }
@@ -140,11 +141,11 @@ console.log("Wrapping Asset B...");
 // reload the issuer account to ensure we have the latest sequence number
 // as the transaction above might've been skipped, the sequence could've been bumped
 // in the account object even though the transaction was not submitted
-issuerAccount = await rpc.getAccount(issuer.publicKey());
+issuerAccount = await rpc.getAccount(issuerKeys.publicKey());
 
 const wrapAssetBTx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.createStellarAssetContract({
@@ -169,7 +170,7 @@ const wrapAssetBTxPrep = await rpc
 // Only submit the transaction if it was prepared successfully
 // otherwise, skip since it is already wrapped
 if (wrapAssetBTxPrep) {
-  wrapAssetBTxPrep.sign(issuer);
+  wrapAssetBTxPrep.sign(issuerKeys);
   await sendTransaction(wrapAssetBTxPrep);
   console.log("Asset B wrapped");
 }
@@ -179,9 +180,9 @@ console.log("Depositing funds in the contract...");
 // reload the issuer account to ensure we have the latest sequence number
 // as the transaction above might've been skipped, the sequence could've been bumped
 // in the account object even though the transaction was not submitted
-issuerAccount = await rpc.getAccount(issuer.publicKey());
+issuerAccount = await rpc.getAccount(issuerKeys.publicKey());
 
-const fromAddress = nativeToScVal(issuer.publicKey(), {
+const fromAddress = nativeToScVal(issuerKeys.publicKey(), {
   type: "address",
 });
 const toAddress = nativeToScVal(contractId, {
@@ -194,11 +195,11 @@ const transferArgs: xdr.ScVal[] = [fromAddress, toAddress, amount];
 
 const transferATx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.invokeContractFunction({
-      contract: assetA.contractId(Networks.TESTNET),
+      contract: assetA.contractId(network),
       function: "transfer",
       args: transferArgs,
     })
@@ -208,7 +209,7 @@ const transferATx = new TransactionBuilder(issuerAccount, {
 
 const transferATxPrep = await rpc.prepareTransaction(transferATx);
 
-transferATxPrep.sign(issuer);
+transferATxPrep.sign(issuerKeys);
 
 await sendTransaction(transferATxPrep);
 
@@ -216,11 +217,11 @@ console.log("Asset A funds(1M) deposited in the contract");
 
 const transferBTx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.invokeContractFunction({
-      contract: assetB.contractId(Networks.TESTNET),
+      contract: assetB.contractId(network),
       function: "transfer",
       args: transferArgs,
     })
@@ -230,7 +231,7 @@ const transferBTx = new TransactionBuilder(issuerAccount, {
 
 const transferBTxPrep = await rpc.prepareTransaction(transferBTx);
 
-transferBTxPrep.sign(issuer);
+transferBTxPrep.sign(issuerKeys);
 
 await sendTransaction(transferBTxPrep);
 

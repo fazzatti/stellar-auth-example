@@ -2,16 +2,16 @@ import {
   Account,
   Asset,
   nativeToScVal,
-  Networks,
   Operation,
   TimeoutInfinite,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { config, rpc } from "./config/env.ts";
+import { getRpc, getSourceAccountConfig } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/io.ts";
 
-const { accountCPublicKey: destinationPublicKey, accountAKeypair: sourceKeys } =
-  config;
+const { network, receiverPk, sourceKeys } = getSourceAccountConfig();
+const rpc = getRpc();
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation
@@ -21,7 +21,7 @@ const xlm = Asset.native();
 const fromAddress = nativeToScVal(sourceKeys.publicKey(), {
   type: "address",
 });
-const toAddress = nativeToScVal(destinationPublicKey, {
+const toAddress = nativeToScVal(receiverPk, {
   type: "address",
 });
 const amount = nativeToScVal(BigInt(10_0000000), {
@@ -51,11 +51,11 @@ try {
 // ===================================================
 const tx = new TransactionBuilder(sourceAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.invokeContractFunction({
-      contract: xlm.contractId(Networks.TESTNET),
+      contract: xlm.contractId(network),
       function: "transfer",
       args,
     })
@@ -73,3 +73,5 @@ const simulatedTransaction = await rpc.prepareTransaction(tx);
 simulatedTransaction.sign(sourceKeys);
 
 console.log("Signed Transaction:\n\n", simulatedTransaction.toXDR(), "\n\n");
+
+saveTransactionXdr(simulatedTransaction.toXDR());

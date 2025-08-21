@@ -1,6 +1,8 @@
 import { Api } from "stellar-sdk/rpc";
-import { rpc } from "../config/env.ts";
+import { getRpc } from "../config/env.ts";
 import { FeeBumpTransaction, Transaction } from "stellar-sdk";
+
+const rpc = getRpc();
 
 export const sendTransaction = async (
   transaction: Transaction | FeeBumpTransaction
@@ -10,7 +12,9 @@ export const sendTransaction = async (
 
     if (sendResponse.status !== "PENDING") {
       throw new Error(
-        `Transaction submission failed with status: ${sendResponse.status}`
+        `Transaction submission failed with status: ${
+          sendResponse.status
+        } \n\n ======> ${sendResponse.errorResult?.result().switch().name}\n`
       );
     }
 
@@ -37,7 +41,7 @@ export const sendTransaction = async (
         );
     }
   } catch (e) {
-    console.log("Something went wrong!");
+    console.log("Something went wrong during transaction submission!");
     // console.log("TX XDR:", transaction.toXDR());
     throw e;
   }

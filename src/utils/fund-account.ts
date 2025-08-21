@@ -1,26 +1,24 @@
-import {
-  Account,
-  Networks,
-  Operation,
-  TransactionBuilder,
-} from "@stellar/stellar-sdk";
-import { config, rpc } from "../config/env.ts";
-import { sendTransaction } from "./send-transaction-fn.ts";
+import { Account, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
 
-const { assetA, assetB, issuer, user } = config.swapDemo;
+import { sendTransaction } from "./send-transaction-fn.ts";
+import { getDemoSwapFundConfig, getRpc } from "../config/env.ts";
+
+const { network, assetA, assetB, issuerKeys, userKeys } =
+  getDemoSwapFundConfig();
+const rpc = getRpc();
 
 const inclusionFee = 1000;
 
 let issuerAccount: Account;
 try {
-  issuerAccount = await rpc.getAccount(issuer.publicKey());
+  issuerAccount = await rpc.getAccount(issuerKeys.publicKey());
 } catch (error) {
   console.error("Error checking issuer account:", error);
   throw error;
 }
 
 try {
-  await rpc.getAccount(user.publicKey());
+  await rpc.getAccount(userKeys.publicKey());
 } catch (error) {
   console.error("Error checking user account:", error);
   throw error;
@@ -30,30 +28,30 @@ console.log("Funding user(Account B) with Asset A and Asset B...");
 
 const tx = new TransactionBuilder(issuerAccount, {
   fee: inclusionFee.toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
 })
   .addOperation(
     Operation.changeTrust({
       asset: assetA,
-      source: user.publicKey(),
+      source: userKeys.publicKey(),
     })
   )
   .addOperation(
     Operation.changeTrust({
       asset: assetB,
-      source: user.publicKey(),
+      source: userKeys.publicKey(),
     })
   )
   .addOperation(
     Operation.payment({
-      destination: user.publicKey(),
+      destination: userKeys.publicKey(),
       asset: assetA,
       amount: "1000000",
     })
   )
   .addOperation(
     Operation.payment({
-      destination: user.publicKey(),
+      destination: userKeys.publicKey(),
       asset: assetB,
       amount: "1000000",
     })
@@ -61,8 +59,8 @@ const tx = new TransactionBuilder(issuerAccount, {
   .setTimeout(90)
   .build();
 
-tx.sign(issuer);
-tx.sign(user);
+tx.sign(issuerKeys);
+tx.sign(userKeys);
 
 await sendTransaction(tx);
 

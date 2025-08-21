@@ -1,6 +1,14 @@
-import { config, rpc } from "../config/env.ts";
+import { Keypair } from "stellar-sdk";
+import { getRpc } from "../config/env.ts";
+import { getArgs } from "./get-args.ts";
 
-const { accountAKeypair: sourceKeys } = config;
+const rpc = getRpc();
+const sourceArg = getArgs(1)[0];
+
+const isSecret = sourceArg.startsWith("S");
+const sourceKeys = isSecret
+  ? Keypair.fromSecret(sourceArg)
+  : Keypair.fromPublicKey(sourceArg);
 
 try {
   const sourceAccount = await rpc.getAccount(sourceKeys.publicKey());

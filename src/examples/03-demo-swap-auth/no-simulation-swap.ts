@@ -3,31 +3,35 @@ import {
   Address,
   authorizeEntry,
   nativeToScVal,
-  Networks,
   Operation,
   SorobanDataBuilder,
   TimeoutInfinite,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { config } from "./config/env.ts";
+
 import { Buffer } from "buffer";
+import { getDemoSwapAuthConfig, getRpc } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/io.ts";
 
 const {
-  swapDemo,
-  validUntilLedgerSeq,
-  stellarNetwork,
-  accountASequenceNumber: sourceAccountSequenceNumber,
-} = config;
-
-const {
-  issuer: sourceKeys,
-  user,
-  swapContractId: contractId,
+  network,
+  sourceKeys,
+  sequence,
+  userKeys,
+  contractId,
   assetA,
   assetB,
-  swapContractWasmHash,
-} = swapDemo;
+  validUntilLedgerSeq,
+  wasmHash,
+} = getDemoSwapAuthConfig();
+
+if (!sequence)
+  throw new Error("Source account sequence number is not provided in the ENV.");
+
+if (!wasmHash) throw new Error("WASM hash is not provided in the ENV.");
+
+const rpc = getRpc();
 
 // ===================================================
 // Encode the arguments for a 'swap' invocation
@@ -42,7 +46,7 @@ const scValIsSellAssetA = nativeToScVal(isSellAssetA, {
 });
 
 // The address of the account performing the swap
-const scValAccount = nativeToScVal(user.publicKey(), {
+const scValAccount = nativeToScVal(userKeys.publicKey(), {
   type: "address",
 });
 
@@ -79,10 +83,7 @@ const subInvocationArgs: xdr.ScVal[] = [scValFrom, scValTo, scValAmount];
 // The account object for the source account to be used in this transaction
 // Since an RPC is not used, we need to create the account object manually
 // and provide the sequence number directly.
-const sourceAccount: Account = new Account(
-  sourceKeys.publicKey(),
-  sourceAccountSequenceNumber
-);
+const sourceAccount: Account = new Account(sourceKeys.publicKey(), sequence);
 
 // Prepare the footprint of the transaction
 // This defines which accounts and contract instances are read and written to
@@ -109,11 +110,11 @@ const swapContractInstanceLedgerEntry = xdr.LedgerKey.contractData(
 
 const swapContractCodeLedgerEntry = xdr.LedgerKey.contractCode(
   new xdr.LedgerKeyContractCode({
-    hash: Buffer.from(swapContractWasmHash, "hex"),
+    hash: Buffer.from(wasmHash, "hex"),
   })
 );
 
-const assetAContractAddress = new Address(assetA.contractId(Networks.TESTNET));
+const assetAContractAddress = new Address(assetA.contractId(network));
 const assetAContractInstanceLedgerEntry = xdr.LedgerKey.contractData(
   new xdr.LedgerKeyContractData({
     contract: assetAContractAddress.toScAddress(),
@@ -122,7 +123,7 @@ const assetAContractInstanceLedgerEntry = xdr.LedgerKey.contractData(
   })
 );
 
-const assetBContractAddress = new Address(assetB.contractId(Networks.TESTNET));
+const assetBContractAddress = new Address(assetB.contractId(network));
 const assetBContractInstanceLedgerEntry = xdr.LedgerKey.contractData(
   new xdr.LedgerKeyContractData({
     contract: assetBContractAddress.toScAddress(),
@@ -224,7 +225,7 @@ const addressAuthEntry = new xdr.SorobanAuthorizationEntry({
     new xdr.SorobanAddressCredentials({
       address: scValAccount.address(),
       nonce: randomNonce,
-      signatureExpirationLedger: validUntilLedgerSeq,
+      signatureExpirationLedger: Number(validUntilLedgerSeq),
       signature: xdr.ScVal.scvVoid(), // Placeholder, will be filled later
     })
   ),
@@ -258,9 +259,9 @@ const addressAuthEntry = new xdr.SorobanAuthorizationEntry({
 // Now that we have the authorization entry, we need to sign it with the sender's keys
 const signedAddressAuthEntry = await authorizeEntry(
   addressAuthEntry,
-  user,
-  validUntilLedgerSeq,
-  stellarNetwork
+  userKeys,
+  Number(validUntilLedgerSeq),
+  network
 );
 
 const authEntries: xdr.SorobanAuthorizationEntry[] = [signedAddressAuthEntry];
@@ -270,7 +271,7 @@ const authEntries: xdr.SorobanAuthorizationEntry[] = [signedAddressAuthEntry];
 // ===================================================
 const tx = new TransactionBuilder(sourceAccount, {
   fee: (inclusionFee + resourceFee).toString(),
-  networkPassphrase: Networks.TESTNET,
+  networkPassphrase: network,
   sorobanData,
 })
   .addOperation(
@@ -287,3 +288,5 @@ const tx = new TransactionBuilder(sourceAccount, {
 tx.sign(sourceKeys);
 
 console.log("Signed Transaction:\n\n", tx.toXDR(), "\n\n");
+
+saveTransactionXdr(tx.toXDR());
