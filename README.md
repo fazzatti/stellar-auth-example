@@ -1,5 +1,7 @@
 # Stellar Auth Examples
 
+This repository compiles a number of examples around Stellar authorization for smart contracts. These range from simple contract invocations with minimal authorization required to more complex call stacks.
+
 ## Requirements
 
 - [Deno](https://deno.land/) - Modern runtime for JavaScript and TypeScript
@@ -13,132 +15,178 @@
    cp .env.example .env
    ```
 
-2. Update `.env` with your configuration.
+2. Update `.env` with your configuration. A base Stellar configuration is shared across all examples and depending on the given example you'll be running, additional variables might be required. Refer to the file's comments and example's description.
 
-**Important:** Make sure the accounts you're using are initialized on-chain. For testnet, this can be done with the Friendbot in [Stellar Lab](https://lab.stellar.org/).
+**Important:** Make sure the accounts you're using are initialized on-chain. For testnet and futurenet, this can be done with the Friendbot in [Stellar Lab](https://lab.stellar.org/).
 
 ## Usage
 
-Use the commands below to run each example or utility.
+Select a demo example below and follow it's steps to execute. Additional utility commands can be used along with the examples and are described under the section 'Utilities'.
 
-### Swap Examples
+### Example 01 - Source Account Auth
 
-The swap examples are based on a smart contract demo within directory `/contracts/simple-swap`. This contract is offers a `swap` function that exchanges in a 1:1 ration the asset A units for asset b units.
+This example cover the steps to assemble and authorize a smart contract invocation of a `transfer` function of a Stellar Asset Contract([SAC](https://developers.stellar.org/docs/tokens/stellar-asset-contract)). The source code can be seen under `./src/examples/01-source-account-auth/`
 
-This function requires auth for the account performing the swap at a root level, then its underlying subinvocations to the assets contracts request additional auth for each transfer.
+**Authorization details:**
+This transaction is configured so the **source account of the transaction** is the same account as the `from` parameter of the `transfer` function. This means that the same account is responsible for authorizing both the transfer of funds as well as the transaction submission(consuming the 'sequence number' and covering the 'network fees').
 
-To run the examples first make sure to have filled in the .env vars, then follow these steps:
+In such cases, the transaction will contain an Authorization Entry for `source-account`. This indicates that when processing this transaction, the same signature provided by the source account in the transaction object is also enough to authorize the authorization entry related to the smart contract invocation.
 
-1. Build the contract, generating its WASM binary.
+**Running the demo:**
+First, make sure you have filled the `.env` with the variables required for this example.
+Then, run the following command:
+
+```bash
+deno task account-source
+```
+
+This command will execute the script, output the XDR-encoded transaction fully signed and also output it to the `.json` directory under the file `transaction-xdr.json`.
+
+You can use the provided XDR to inspect this transaction in detail using the [Stellar Lab](https://lab.stellar.org/), or use [Send Transaction](#send-transaction) utility to submit the transaction.
+
+**Manual Variant (No RPC)**
+This demo has a manual variant that assembles the entire transaction manually, without using the RPC for loading chain state or simulating the transaction. The purpose of this example is to highlight the granular details that go in such a transaction configuration and authorization.
+
+This variant requires additional variables in the `.env` to indicate:
+
+- **Source sequence number**: The current sequence number of the source account of the transaction. It must match the current number on-chain or the transaction will fail. You can usee the [Sequence](#sequence) utility to fetch the current number.
+
+To execute this variant, run the following command:
+
+```bash
+deno task account-source:manual
+```
+
+### Example 02 - Simple Auth Entry
+
+This example cover the steps to assemble and authorize a smart contract invocation of a `transfer` function of a Stellar Asset Contract([SAC](https://developers.stellar.org/docs/tokens/stellar-asset-contract)). The source code can be seen under `./src/examples/02-simple-auth-entry/`
+
+**Authorization details:**
+This transaction is configured so the **source account of the transaction** is **different** than the account set as the `from` parameter of the `transfer` function. This means that we have one account authorizing the transfer of funds and another one authorizing the transaction submission(consuming the 'sequence number' and covering the 'network fees').
+
+In such cases, the transaction will contain an Authorization Entry for `address`, with the specific credentials and call stack related to the smart contract invocation. This entry needs to be signed by the `from` account separately from the transaction object signature.
+
+When authorizing this transaction, the auth entry is signed first and added to the transaction object. Then once all auth entries are signed and embedded in the transaction, the source account will sign the transaction object.
+
+**Running the demo:**
+First, make sure you have filled the `.env` with the variables required for this example.
+Then, run the following command:
+
+```bash
+deno task simple-auth-entry
+```
+
+This command will execute the script, output the XDR-encoded transaction fully signed and also output it to the `.json` directory under the file `transaction-xdr.json`.
+
+You can use the provided XDR to inspect this transaction in detail using the [Stellar Lab](https://lab.stellar.org/), or use [Send Transaction](#send-transaction) utility to submit the transaction.
+
+**Manual Variant (No RPC)**
+This demo has a manual variant that assembles the entire transaction manually, without using the RPC for loading chain state or simulating the transaction. The purpose of this example is to highlight the granular details that go in such a transaction configuration and authorization.
+
+This variant requires additional variables in the `.env` to indicate:
+
+- **Source sequence number**: The current sequence number of the source account of the transaction. It must match the current number on-chain or the transaction will fail. You can usee the [Sequence](#sequence) utility to fetch the current number.
+
+To execute this variant, run the following command:
+
+```bash
+deno task simple-auth-entry:manual
+```
+
+### Example 03 - Demo Swap Auth
+
+This example cover the steps to assemble and authorize a smart contract invocation of a `swap` function of a demo contract provided in this project. See the section [Simple Swap Contract](#simple-swap-contract) and make sure to follow its required steps before running this example.
+
+The source code for this example can be an be seen under `./src/examples/03-demo-swap-auth/`
+
+**Authorization details:**
+This transaction is a bit more complex than the other examples. It requires the following authorization:
+
+- **Transaction Source:** A signature at the transaction level produced by the `source account` of the transaction to authorize the sequence number consumption and covering the network fees. Here we are using the `issuer` account only for this purpose.
+- **Contract invocation:** Depending on the invocation stack, auth entries need to be signed and provided for each requirement. In this demo, the `swap` function requires authorization from the address performing the swap which will be the `user` account. Also, as parte of a cross-contract call,deeper in the invocation stack, the asset contract moving the funds from this account will also require authorization from the `user` account when executing the `transfer` function.
+
+In such cases, the transaction will contain one or multiple Authorization Entries for `address`, with the specific credentials and call stack related to the smart contract invocation. This entry needs to be signed by the address specified.
+
+When authorizing this transaction, the auth entry/entries is/are signed first and added to the transaction object. Then once all auth entries are signed and embedded in the transaction, the source account will sign the transaction object.
+
+**Running the demo:**
+First, make sure you have filled the `.env` with the variables required for this example.
+Then, run the following command:
+
+```bash
+deno task swap
+```
+
+This command will execute the script, output the XDR-encoded transaction fully signed and also output it to the `.json` directory under the file `transaction-xdr.json`.
+
+You can use the provided XDR to inspect this transaction in detail using the [Stellar Lab](https://lab.stellar.org/), or use [Send Transaction](#send-transaction) utility to submit the transaction.
+
+**Manual Variant (No RPC)**
+This demo has a manual variant that assembles the entire transaction manually, without using the RPC for loading chain state or simulating the transaction. The purpose of this example is to highlight the granular details that go in such a transaction configuration and authorization.
+
+This variant requires additional variables in the `.env` to indicate:
+
+- **Source sequence number**: The current sequence number of the source account of the transaction. It must match the current number on-chain or the transaction will fail. You can usee the [Sequence](#sequence) utility to fetch the current number.
+
+To execute this variant, run the following command:
+
+```bash
+deno task swap:manual
+```
+
+## Simple Swap Contract
+
+This project has a contract implementation for the `simple-swap` contract that can be found under `./contracts/simple-swap`. This contract is initialized with a pair of assets(`AssetA` and `AssetB`) and funded with both assets after initialization. It then provides a `swap` function that exchanges in a 1:1 ratio one asset for the other.
+
+The `swap` function helps demonstrate nested requirements for auth as it contains a `require_auth()` at the root level of the function but also as it triggers invocations to the assets's contracts, the underlying `transfer` functions will also require the authorization of the `from` address.
+
+To setup this contract for the examples above follow these steps:
+
+1. Make sure you've filled in the `.env` variables required by the 'Simple Swap Contract Configuration' under 'PRE-DEPLOYMENT PARAMETERS' section.
+2. Build the contract, generating its WASM binary.
 
 ```bash
 stellar contract build
 ```
 
-2. Run the command below to trigger a script that will upload the wasm, deploy a new instance, wrap two demo assets in SAC contracts and also initialize and fund the swap contract with these assets.
+3. Run the command below to trigger a script that will upload the wasm, deploy a new instance, wrap two demo assets in SAC contracts and also initialize and fund the swap contract with these assets. This will use the `issuer` account provided in the env variables.
 
 ```bash
-deno task deploy
+deno task swap:deploy
 ```
 
-At the end of the script, copy the `contract id` and `wasm hash` values outputed and use them in the `.env` file.
+At the end of the script, copy the `contract id` and `wasm hash` values outputed and use them in the `.env` file under the 'POST-DEPLOYMENT PARAMETERS' section.
 
-3. Run the command below to fund the 'Account B' which will be used as the `user` account to peform the swaps.
+1. Run the command below to fund the `user` account with unites of both assets to peform the swaps.
 
 ```bash
-deno task fund-user
+deno task swap:fund-user
 ```
 
-#### Swap Authorization Example with Simulation
+## Utilities
 
-`(See the script at /src/simulated-swap.ts )`
-This example performs a `swap` invocation in which the `user`(Account B) sends the contract some units of Asset A in exchange for the same amount of units from Asset B. This account needs to authorize the root swap invocation as well as the relevant subinvocation for transfering the funds.
+These are complementary commands to provide additional features around the demos.
 
-The transaction source account is set to the `issuer`(Account A), so this account needs to authorize the use of its sequence number and also the networks fees cost.
+### Send Transaction
 
-This example builds a smart contract transaction using the RPC to simulate its execution. The authorization is then provided based on the simulation result.
+This command will read the file `transaction-xdr.json` from the `./.json` directory, load the transaction and submit to the network for processing. Transactions are automatically updated in this file some example finish running.
 
-To execute the script, run the command below:
+To use this feature, run the following command:
 
 ```bash
-deno task simulated-swap
+deno task send-tx
 ```
 
-A transaction XDR will be outputed with the fully signed transaction. You can copy this XDR and submit using the utility task `send-tx`, see the section below.
+Once completed, the hash and status of the transaction will be outputed to console.
 
-#### Swap Authorization Example without Simulation
+### Sequence
 
-`(See the script at /src/no-simulation-swap.ts )`
-This example performs a `swap` invocation in which the `user`(Account B) sends the contract some units of Asset A in exchange for the same amount of units from Asset B. This account needs to authorize the root swap invocation as well as the relevant subinvocation for transfering the funds.
+This command will fetch the current [sequence number](https://developers.stellar.org/docs/learn/glossary#sequence-number) for a given account on-chain and log to console.
 
-The transaction source account is set to the `issuer`(Account A), so this account needs to authorize the use of its sequence number and also the networks fees cost.
+When using the 'Manual' variants of the examples, you can run this command for the source account, then copy and update the `.env` with the number provided. It is important to note that the **sequence number is consumed after the transaction is processed**, therefore it needs to be updated to +1 before the next transaction.
 
-This example builds a smart contract transaction without using the RPC, so the entire transaction configuration is done manually. The transaction footprint as well as the authorization entries are assembled based on the expected execution of the transaction.
-
-To execute the script, run the command below:
-
-Obs.: before running it, always make sure to have updated the env for the sequence number. You can use the utility task for `current-sequence` to get the latest value.
+To use this feature, run the following command, providing the account's public or secret key as argument. The command accepts both interchangeably.
 
 ```bash
-deno task no-simulation-swap
-```
-
-A transaction XDR will be outputed with the fully signed transaction. You can copy this XDR and submit using the utility task `send-tx`, see the section below.
-
-### Transfer Examples
-
-#### Source Account Example with Simulation
-
-This example builds a smart contract transaction using the RPC to simulate its execution. This transaction is configured in a way that **requires only a source-account authorization**.
-
-```bash
-deno task simulated-source-account
-```
-
-#### Source Account Example without Simulation
-
-This example builds a smart contract transaction **without using the RPC or the simulation step**. This transaction is configured in a way that **requires only a source-account authorization**.
-
-Obs.: before running it, always make sure to have updated the env for the sequence number. You can use the utility task for `current-sequence` to get the latest value.
-
-```bash
-deno task no-simulation-source-account
-```
-
-#### Authorization Entries Example with Simulation
-
-This example builds a smart contract transaction using the RPC to simulate its execution. This transaction is configured in a way that **requires signing individual authorization entries**.
-
-```bash
-deno task simulated-auth-entries
-```
-
-#### Authorization Entries Example without Simulation
-
-This example builds a smart contract transaction **without using the RPC or the simulation step**. This transaction is configured in a way that **requires signing individual authorization entries**.
-
-Obs.: before running it, always make sure to have updated the env for the sequence number. You can use the utility task for `current-sequence` to get the latest value.
-
-```bash
-deno task no-simulation-auth-entries
-```
-
-### Utilities
-
-#### Check the current sequence number for the source account
-
-A necessary env for the examples that run without RPC is the `SOURCE_SEQUENCE_NUMBER` which defines what is the current sequence number for the source account (defined in `SOURCE_SECRET_KEY`). For the transactions to be valid, the sequence number in the ENV must match the current sequence number in the ledger.
-
-To get the updated value run:
-
-```bash
-deno task current-sequence
-```
-
-#### Send a transaction
-
-Given a transaction XDR, it will submit it to the network for processing and check its status for a few attempts. This can be used to submit the transactions generated in the examples.
-
-```bash
-deno task send-tx --tx=<TRANSACTION XDR STRING>
+deno task sequence <ACCOUNT PK / ACCOUNT SK>
 ```
