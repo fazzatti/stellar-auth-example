@@ -12,14 +12,11 @@ import {
 import { getSourceAccountConfig } from "../../config/env.ts";
 import { saveTransactionXdr } from "../../utils/io.ts";
 
-const { receiverPk, sourceKeys, sequenceNumber, validUntilLedgerSeq, network } =
+const { receiverPk, sourceKeys, sequenceNumber, network } =
   getSourceAccountConfig();
 
 if (!sequenceNumber)
   throw new Error("Source account sequence number is not provided in the ENV.");
-
-if (!validUntilLedgerSeq)
-  throw new Error("Receiver public key is not provided in the ENV.");
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation

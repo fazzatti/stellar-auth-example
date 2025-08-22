@@ -171,7 +171,6 @@ export const getSourceAccountConfig = () => {
     ),
     receiverPk: getRequiredEnv("RECEIVER_ACCOUNT_PUBLIC_KEY_01"),
     sequenceNumber: getOptionalEnv("SOURCE_SEQUENCE_NUMBER_01"),
-    validUntilLedgerSeq: getOptionalEnv("VALID_UNTIL_LEDGER_SEQ_01"),
     rpc: getRpc(),
   };
 };
