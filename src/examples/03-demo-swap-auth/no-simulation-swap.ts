@@ -1,7 +1,9 @@
 import {
   Account,
   Address,
+  Asset,
   authorizeEntry,
+  Keypair,
   nativeToScVal,
   Operation,
   SorobanDataBuilder,
@@ -11,27 +13,43 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { Buffer } from "buffer";
-import { getDemoSwapAuthConfig, getRpc } from "../../config/env.ts";
-import { saveTransactionXdr } from "../../utils/io.ts";
+import { config } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/save-transaction.ts";
+import { readFromJsonFile } from "../../utils/io.ts";
+import { SwapDemoInput } from "./simulated-swap.ts";
 
+const { io, network, swapDemo } = config;
+const { assetACode, assetBCode } = swapDemo;
+
+const inputArgs = await readFromJsonFile<SwapDemoInput>(
+  io.swapDemoInputFileName
+);
 const {
-  network,
-  sourceKeys,
-  sequence,
-  userKeys,
-  contractId,
-  assetA,
-  assetB,
+  userSk,
+  sourceSk,
+  issuerSk,
   validUntilLedgerSeq,
+  contractId,
   wasmHash,
-} = getDemoSwapAuthConfig();
+  sourceSequence,
+} = inputArgs;
 
-if (!sequence)
-  throw new Error("Source account sequence number is not provided in the ENV.");
+if (!sourceSequence)
+  throw new Error(
+    "Source account sequence number is not provided in the input file."
+  );
 
-if (!wasmHash) throw new Error("WASM hash is not provided in the ENV.");
+if (!wasmHash) throw new Error("WASM hash is not provided in the input file.");
 
-const rpc = getRpc();
+if (!issuerSk)
+  throw new Error("Issuer secret key is not provided in the input file.");
+
+const sourceKeys = Keypair.fromSecret(sourceSk);
+const userKeys = Keypair.fromSecret(userSk);
+const issuerKeys = Keypair.fromSecret(issuerSk);
+
+const assetA = new Asset(assetACode, issuerKeys.publicKey());
+const assetB = new Asset(assetBCode, issuerKeys.publicKey());
 
 // ===================================================
 // Encode the arguments for a 'swap' invocation
@@ -83,7 +101,10 @@ const subInvocationArgs: xdr.ScVal[] = [scValFrom, scValTo, scValAmount];
 // The account object for the source account to be used in this transaction
 // Since an RPC is not used, we need to create the account object manually
 // and provide the sequence number directly.
-const sourceAccount: Account = new Account(sourceKeys.publicKey(), sequence);
+const sourceAccount: Account = new Account(
+  sourceKeys.publicKey(),
+  sourceSequence
+);
 
 // Prepare the footprint of the transaction
 // This defines which accounts and contract instances are read and written to

@@ -1,17 +1,33 @@
 import {
   Account,
   Asset,
+  Keypair,
   nativeToScVal,
   Operation,
   TimeoutInfinite,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { getRpc, getSourceAccountConfig } from "../../config/env.ts";
-import { saveTransactionXdr } from "../../utils/io.ts";
+import { config, getRpc } from "../../config/env.ts";
+import { readFromJsonFile } from "../../utils/io.ts";
+import { saveTransactionXdr } from "../../utils/save-transaction.ts";
 
-const { network, receiverPk, sourceKeys } = getSourceAccountConfig();
+export interface SourceAccountDemoInput {
+  sourceSk: string;
+  receiverPk: string;
+  sourceSequence?: string;
+}
+
+const { io, network } = config;
+
+const inputArgs = await readFromJsonFile<SourceAccountDemoInput>(
+  io.sourceAccountAuthInputFileName
+);
+
+const { receiverPk, sourceSk } = inputArgs;
 const rpc = getRpc();
+
+const sourceKeys = Keypair.fromSecret(sourceSk);
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation

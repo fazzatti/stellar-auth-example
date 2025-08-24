@@ -3,6 +3,7 @@ import {
   Address,
   Asset,
   authorizeEntry,
+  Keypair,
   nativeToScVal,
   Operation,
   TimeoutInfinite,
@@ -11,13 +12,28 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { Api } from "stellar-sdk/rpc";
-import { getRpc, getSimpleAuthEntryConfig } from "../../config/env.ts";
-import { saveTransactionXdr } from "../../utils/io.ts";
+import { config, getRpc } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/save-transaction.ts";
+import { readFromJsonFile } from "../../utils/io.ts";
 
-const { network, validUntilLedgerSeq, sourceKeys, senderKeys, receiverPk } =
-  getSimpleAuthEntryConfig();
+export interface SimpleAuthEntryDemoInput {
+  sourceSk: string;
+  senderSk: string;
+  receiverPk: string;
+  validUntilLedgerSeq: number;
+  sourceSequence?: string;
+}
 
+const { io, network } = config;
+
+const inputArgs = await readFromJsonFile<SimpleAuthEntryDemoInput>(
+  io.simpleAuthEntryInputFileName
+);
+const { receiverPk, senderSk, sourceSk, validUntilLedgerSeq } = inputArgs;
 const rpc = getRpc();
+
+const sourceKeys = Keypair.fromSecret(sourceSk);
+const senderKeys = Keypair.fromSecret(senderSk);
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation

@@ -1,6 +1,7 @@
 import { Api } from "stellar-sdk/rpc";
 import { getRpc } from "../config/env.ts";
 import { FeeBumpTransaction, Transaction } from "stellar-sdk";
+import { highlightText } from "./highlight-text.ts";
 
 const rpc = getRpc();
 
@@ -29,7 +30,7 @@ export const sendTransaction = async (
 
     switch (finalStatus.status) {
       case Api.GetTransactionStatus.SUCCESS:
-        console.log("Transaction succeeded!");
+        console.log(highlightText("Transaction succeeded!", "green"));
         return finalStatus;
 
       case Api.GetTransactionStatus.FAILED:

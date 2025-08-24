@@ -2,19 +2,42 @@ import {
   Account,
   Address,
   authorizeEntry,
+  Keypair,
   nativeToScVal,
   Operation,
   TimeoutInfinite,
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { getDemoSwapAuthConfig, getRpc } from "../../config/env.ts";
 import { Api } from "stellar-sdk/rpc";
-import { saveTransactionXdr } from "../../utils/io.ts";
+import { config, getRpc } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/save-transaction.ts";
+import { readFromJsonFile } from "../../utils/io.ts";
 
-const { network, sourceKeys, userKeys, contractId, validUntilLedgerSeq } =
-  getDemoSwapAuthConfig();
+export interface SwapDemoInput {
+  contractId: string;
+  sourceSk: string;
+  userSk: string;
+  validUntilLedgerSeq: number;
+  sourceSequence?: string;
+  issuerSk?: string;
+  wasmHash?: string;
+}
+
+const { io, network } = config;
+
+const inputArgs = await readFromJsonFile<SwapDemoInput>(
+  io.swapDemoInputFileName
+);
+const { userSk, sourceSk, validUntilLedgerSeq, contractId } = inputArgs;
 const rpc = getRpc();
+
+const sourceKeys = Keypair.fromSecret(sourceSk);
+const userKeys = Keypair.fromSecret(userSk);
+
+// const { network, sourceKeys, userKeys, contractId, validUntilLedgerSeq } =
+//   getDemoSwapAuthConfig();
+// const rpc = getRpc();
 
 // ===================================================
 // Encode the arguments for a 'swap' invocation

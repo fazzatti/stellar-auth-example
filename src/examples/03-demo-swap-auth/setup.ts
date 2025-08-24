@@ -1,24 +1,46 @@
 import {
   Account,
   Address,
+  Asset,
+  Keypair,
   nativeToScVal,
   Operation,
   TransactionBuilder,
   xdr,
-} from "@stellar/stellar-sdk";
-import { getDemoSwapContractDeployConfig, getRpc } from "../config/env.ts";
-import { loadWasmFile } from "./load-wasm.ts";
-import { sendTransaction } from "./send-transaction-fn.ts";
+} from "stellar-sdk";
+import { initializeWithFriendbot } from "../../utils/initialize-with-friendbot.ts";
+import { config, getRpc } from "../../config/env.ts";
+import { saveToJsonFile } from "../../utils/io.ts";
+import { getExpirationLedger } from "../../utils/get-expiration-ledger.ts";
+import { SwapDemoInput } from "./simulated-swap.ts";
+import { loadWasmFile } from "../../utils/load-wasm.ts";
+import { sendTransaction } from "../../utils/send-transaction-fn.ts";
 import { Buffer } from "buffer";
-import { generateRandomSalt } from "./generate-random-salt.ts";
+import { generateRandomSalt } from "../../utils/generate-random-salt.ts";
 
+const { io, swapDemo, network } = config;
+const { assetACode, assetBCode } = swapDemo;
+
+const rpc = getRpc();
+const issuerKeys = Keypair.random();
+const userKeys = Keypair.random();
+
+const assetA = new Asset(assetACode, issuerKeys.publicKey());
+const assetB = new Asset(assetBCode, issuerKeys.publicKey());
+
+console.log("=============================================");
+console.log("Setup of Example 03 - Simple Swap Demo");
+console.log("=============================================");
+console.log("Initializing Issuer Account:", issuerKeys.publicKey(), "...");
+await initializeWithFriendbot(issuerKeys.publicKey());
+
+console.log("Initializing User Account:", userKeys.publicKey(), "...");
+await initializeWithFriendbot(userKeys.publicKey());
+
+console.log("Loading WASM file...");
 const wasm = await loadWasmFile(
   "./target/wasm32v1-none/release/simple_swap.wasm"
 );
-
-const { network, assetA, assetB, issuerKeys } =
-  getDemoSwapContractDeployConfig();
-const rpc = getRpc();
 
 const inclusionFee = 1000;
 
@@ -237,10 +259,90 @@ await sendTransaction(transferBTxPrep);
 
 console.log("Asset B funds(1M) deposited in the contract");
 
-console.log("All done!");
+try {
+  issuerAccount = await rpc.getAccount(issuerKeys.publicKey());
+} catch (error) {
+  console.error("Error checking issuer account:", error);
+  throw error;
+}
 
-console.log(`\n\n
-------------------------------------------------------------
-Code Uploaded - Wasm Hash: ${wasmHash}
-Swap Contract deployed - ID: ${contractId}
-`);
+try {
+  await rpc.getAccount(userKeys.publicKey());
+} catch (error) {
+  console.error("Error checking user account:", error);
+  throw error;
+}
+
+console.log("Funding user(Account B) with Asset A and Asset B...");
+
+const tx = new TransactionBuilder(issuerAccount, {
+  fee: inclusionFee.toString(),
+  networkPassphrase: network,
+})
+  .addOperation(
+    Operation.changeTrust({
+      asset: assetA,
+      source: userKeys.publicKey(),
+    })
+  )
+  .addOperation(
+    Operation.changeTrust({
+      asset: assetB,
+      source: userKeys.publicKey(),
+    })
+  )
+  .addOperation(
+    Operation.payment({
+      destination: userKeys.publicKey(),
+      asset: assetA,
+      amount: "1000000",
+    })
+  )
+  .addOperation(
+    Operation.payment({
+      destination: userKeys.publicKey(),
+      asset: assetB,
+      amount: "1000000",
+    })
+  )
+  .setTimeout(90)
+  .build();
+
+tx.sign(issuerKeys);
+tx.sign(userKeys);
+
+await sendTransaction(tx);
+
+console.log("Funded user with 1M units of Asset A and Asset B");
+
+console.log("Loading Source Account...");
+
+try {
+  issuerAccount = await rpc.getAccount(issuerKeys.publicKey());
+} catch (error) {
+  console.error("Error checking issuer account:", error);
+  throw error;
+}
+
+console.log("Loading latest ledger...");
+const minsFromNow = 600;
+const validUntilLedgerSeq = await getExpirationLedger(minsFromNow);
+
+console.log(
+  "Setting the 'valid until ledger sequence' to:",
+  validUntilLedgerSeq
+);
+console.log(`About ${minsFromNow} minutes from now`);
+
+const output: SwapDemoInput = {
+  contractId: contractId,
+  wasmHash: wasmHash,
+  sourceSk: issuerKeys.secret(),
+  userSk: userKeys.secret(),
+  issuerSk: issuerKeys.secret(),
+  sourceSequence: issuerAccount.sequenceNumber().toString(),
+  validUntilLedgerSeq,
+};
+
+await saveToJsonFile<SwapDemoInput>(output, io.swapDemoInputFileName);
+console.log("Setup complete!");

@@ -65,6 +65,40 @@ if (!(networkKey in Networks)) {
 
 export const stellarNetwork = Networks[networkKey as keyof typeof Networks];
 
+export const ioConfig = {
+  outputDirectory: "./.json",
+  transactionFileName: "transaction-xdr",
+  proxyInputFileName: "proxy-input",
+  proxyConfigFileName: "proxy-config",
+  airGappedConfigFileName: "air-gapped-config",
+  airGappedInputFileName: "air-gapped-input",
+  sourceAccountAuthInputFileName: "source-account-auth-input",
+  simpleAuthEntryInputFileName: "simple-auth-entry-input",
+  swapDemoInputFileName: "swap-demo-input",
+  swapContractPath: "./target/wasm32v1-none/release/simple_swap.wasm",
+};
+export const config = {
+  network: stellarNetwork,
+  swapDemo: { assetACode: "ASSETA", assetBCode: "ASSETB" },
+  io: ioConfig,
+};
+
+export const getFriendbotUrl = () => {
+  switch (stellarNetwork) {
+    case Networks.TESTNET:
+      return "https://friendbot.stellar.org";
+    case Networks.FUTURENET:
+      return "https://friendbot-futurenet.stellar.org";
+    case Networks.PUBLIC:
+    case Networks.SANDBOX:
+    case Networks.STANDALONE:
+    default:
+      throw new Error(
+        `Friendbot is not defined for the ${stellarNetwork} network.`
+      );
+  }
+};
+
 // const accountAKeypair = Keypair.fromSecret(
 //   getRequiredEnv("ACCOUNT_A_SECRET_KEY")
 // );
@@ -153,11 +187,6 @@ export const stellarNetwork = Networks[networkKey as keyof typeof Networks];
 // }
 
 // export const args: Args = parseArgs();
-
-export const ioConfig = {
-  outputDirectory: "./.json",
-  transactionFileName: "transaction-xdr",
-};
 
 export const getRpc = () => {
   return new Server(getRequiredEnv("STELLAR_RPC_URL"), { allowHttp: true });

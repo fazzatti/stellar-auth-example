@@ -1,16 +1,28 @@
 {
   "tasks": {
-    "source-account:manual": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/01-source-account-auth/no-simulation-source-account.ts",
     "source-account": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/01-source-account-auth/simulated-source-account.ts",
-    "simple-auth-entry:manual": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/02-simple-auth-entry/no-simulation-auth-entries.ts",
+    "source-account:manual": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/01-source-account-auth/no-simulation-source-account.ts",
+    "source-account:setup": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/01-source-account-auth/setup.ts",
+    "source-account:sequence": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/current-sequence.ts source-account",
+
     "simple-auth-entry": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/02-simple-auth-entry/simulated-auth-entries.ts",
-    "swap:manual": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/03-demo-swap-auth/no-simulation-swap.ts",
+    "simple-auth-entry:setup": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/02-simple-auth-entry/setup.ts",
+    "simple-auth-entry:manual": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/02-simple-auth-entry/no-simulation-auth-entries.ts",
+    "simple-auth-entry:sequence": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/current-sequence.ts simple-auth-entry",
+
     "swap": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/03-demo-swap-auth/simulated-swap.ts",
-    "proxy": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/proxy-example/proxy.ts",
-    "sequence": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/current-sequence.ts",
-    "send-tx": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/load-and-send-transaction.ts",
-    "swap:deploy": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/deploy-contract.ts",
-    "swap:fund-user": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/fund-account.ts"
+    "swap:setup": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/03-demo-swap-auth/setup.ts",
+    "swap:manual": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/03-demo-swap-auth/no-simulation-swap.ts",
+    "swap:sequence": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/current-sequence.ts simple-swap-auth",
+
+    "ag:setup": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/04-air-gapped-auth/setup.ts",
+    "ag:proxy": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/04-air-gapped-auth/proxy.ts raw",
+    "ag:proxy:xdr": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/04-air-gapped-auth/proxy.ts xdr",
+    "ag:sign": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/04-air-gapped-auth/air-gapped.ts raw",
+    "ag:sign:xdr": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/examples/04-air-gapped-auth/air-gapped.ts xdr",
+    "ag:clear": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/clear-airgapped-inputs.ts",
+
+    "send-tx": "deno run --allow-env --allow-net --allow-read --allow-write --allow-ffi --env src/utils/load-and-send-transaction.ts"
   },
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window", "deno.worker"],

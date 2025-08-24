@@ -3,6 +3,7 @@ import {
   Address,
   Asset,
   authorizeEntry,
+  Keypair,
   nativeToScVal,
   Operation,
   SorobanDataBuilder,
@@ -10,20 +11,26 @@ import {
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { getSimpleAuthEntryConfig } from "../../config/env.ts";
-import { saveTransactionXdr } from "../../utils/io.ts";
+import { config } from "../../config/env.ts";
+import { saveTransactionXdr } from "../../utils/save-transaction.ts";
+import { readFromJsonFile } from "../../utils/io.ts";
+import { SimpleAuthEntryDemoInput } from "./simulated-auth-entries.ts";
 
-const {
-  network,
-  validUntilLedgerSeq,
-  sourceKeys,
-  senderKeys,
-  receiverPk,
-  sequenceNumber,
-} = getSimpleAuthEntryConfig();
+const { io, network } = config;
 
-if (!sequenceNumber)
-  throw new Error("Source account sequence number is not provided in the ENV.");
+const inputArgs = await readFromJsonFile<SimpleAuthEntryDemoInput>(
+  io.simpleAuthEntryInputFileName
+);
+const { receiverPk, senderSk, sourceSk, validUntilLedgerSeq, sourceSequence } =
+  inputArgs;
+
+const sourceKeys = Keypair.fromSecret(sourceSk);
+const senderKeys = Keypair.fromSecret(senderSk);
+
+if (!sourceSequence)
+  throw new Error(
+    "Source account sequence number is not provided in input file."
+  );
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation
@@ -51,7 +58,7 @@ const args: xdr.ScVal[] = [fromAddress, toAddress, amount];
 // and provide the sequence number directly.
 const sourceAccount: Account = new Account(
   sourceKeys.publicKey(),
-  sequenceNumber
+  sourceSequence
 );
 
 // Prepare the footprint of the transaction

@@ -2,6 +2,7 @@ import {
   Account,
   Address,
   Asset,
+  Keypair,
   nativeToScVal,
   Operation,
   SorobanDataBuilder,
@@ -9,14 +10,26 @@ import {
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
-import { getSourceAccountConfig } from "../../config/env.ts";
-import { saveTransactionXdr } from "../../utils/io.ts";
 
-const { receiverPk, sourceKeys, sequenceNumber, network } =
-  getSourceAccountConfig();
+import { config } from "../../config/env.ts";
+import { readFromJsonFile } from "../../utils/io.ts";
+import { saveTransactionXdr } from "../../utils/save-transaction.ts";
+import { SourceAccountDemoInput } from "./simulated-source-account.ts";
 
-if (!sequenceNumber)
-  throw new Error("Source account sequence number is not provided in the ENV.");
+const { io, network } = config;
+
+const inputArgs = await readFromJsonFile<SourceAccountDemoInput>(
+  io.sourceAccountAuthInputFileName
+);
+
+const { receiverPk, sourceSk, sourceSequence } = inputArgs;
+
+const sourceKeys = Keypair.fromSecret(sourceSk);
+
+if (!sourceSequence)
+  throw new Error(
+    "Source account sequence number is required for this transaction."
+  );
 
 // ===================================================
 // Encode the arguments for a 'transfer' invocation
@@ -43,7 +56,7 @@ const args: xdr.ScVal[] = [fromAddress, toAddress, amount];
 // and provide the sequence number directly.
 const sourceAccount: Account = new Account(
   sourceKeys.publicKey(),
-  sequenceNumber
+  sourceSequence
 );
 
 // Prepare the footprint of the transaction
