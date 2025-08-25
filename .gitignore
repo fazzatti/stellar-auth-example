@@ -1,6 +1,9 @@
 # Environment variables
 .env
 
+# Stellar CLI
+.stellar/
+
 # output files
 .json/
 
