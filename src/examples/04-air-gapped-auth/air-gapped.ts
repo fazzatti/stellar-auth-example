@@ -21,7 +21,6 @@ import {
 } from "./types.ts";
 import { getOutputFormatArg } from "../../utils/get-output-format-arg.ts";
 import { highlightText } from "../../utils/highlight-text.ts";
-import { equal, notEqual } from "node:assert";
 
 const { io, network } = config;
 const outputFormat = getOutputFormatArg();
@@ -63,6 +62,7 @@ Running the Airgapped side of Example 04 - Air Gapped Auth Demo
   )
 );
 
+// Main workflow that executes when Airgapped runs
 const runAirgapped = async () => {
   if (fnName !== "swap") {
     throw new Error(`Invalid function name: ${fnName}. Expected: swap`);
@@ -74,21 +74,28 @@ const runAirgapped = async () => {
     );
   }
 
+  // Verify if the auth parameters were provided raw values or encoded XDR
   const isRawFormat = (auth as AirGappedAuthInputRaw).rawEntries ? true : false;
 
+  // Load the entries provided as auth entry objects
   const entriesToSign: xdr.SorobanAuthorizationEntry[] = isRawFormat
     ? paramsToAuthEntries((auth as AirGappedAuthInputRaw).rawEntries)
     : (auth as AirGappedAuthInputXdr).entriesXdr.map((entry) =>
         xdr.SorobanAuthorizationEntry.fromXDR(entry, "base64")
       );
-  const expirationLedger = !isRawFormat
-    ? (auth as AirGappedAuthInputXdr).signatureExpirationLedger
-    : undefined;
 
   if (entriesToSign.length === 0) {
     throw new Error("No authorization entries provided for signing.");
   }
 
+  // When using the raw format, the expiration ledger is set directly for
+  // each entry. When using the XDR, a single parameter will be provided
+  // for all entries for simplicity.
+  const expirationLedger = !isRawFormat
+    ? (auth as AirGappedAuthInputXdr).signatureExpirationLedger
+    : undefined;
+
+  // Sign the entries that require the secure user's signature
   const signedEntries = await signEntries(
     secureUserKeys,
     entriesToSign,
@@ -96,9 +103,11 @@ const runAirgapped = async () => {
     expirationLedger
   );
 
+  // Output the signed entries in the requested format
   await outputSignedEntries(signedEntries);
 };
 
+// Function that signs the authorization entries
 const signEntries = async (
   signer: Keypair,
   entries: xdr.SorobanAuthorizationEntry[],
@@ -112,9 +121,6 @@ const signEntries = async (
   if (!entries || entries.length === 0) {
     throw new Error("No auth entries returned from simulation");
   }
-
-  // Check each entry and sign the necessary ones
-  //
   const signedEntries = [];
 
   console.log("Verifying Auth Entries from simulation:");
@@ -129,11 +135,10 @@ const signEntries = async (
       entry.credentials().switch().name === "sorobanCredentialsSourceAccount"
     ) {
       console.log("Source Account Entry found for account:", requiredSigner);
-
       continue; // Source account entry, no need to sign the entry individually
     }
 
-    // look for our signer authorization entry and sign it
+    // look for authorization entries related to our signer and sign it
     if (requiredSigner === signer.publicKey()) {
       // check if the entry's root invocation matches
       // the invocation parameters inputed by the user.
@@ -166,56 +171,10 @@ const signEntries = async (
   return signedEntries;
 };
 
-const outputSignedEntries = async (
-  signedEntries: xdr.SorobanAuthorizationEntry[]
-) => {
-  let output: ProxyAuthInput[];
-
-  if (outputFormat === "raw") {
-    output = signedEntries.map(
-      (entry) =>
-        ({
-          signature: entry.credentials().address().signature().toXDR("base64"),
-          nonce: entry.credentials().address().nonce().toString(),
-          signatureExpirationLedger: entry
-            .credentials()
-            .address()
-            .signatureExpirationLedger(),
-        } as ProxyAuthInputRaw)
-    );
-  } else {
-    output = signedEntries.map(
-      (entry) =>
-        ({
-          authEntryXdr: entry.toXDR("base64"),
-        } as ProxyAuthInputXdr)
-    );
-  }
-
-  console.log(
-    ` ${highlightText(
-      output.length.toString(),
-      "yellow"
-    )} auth entries were signed. `
-  );
-  console.log(
-    `Updating the ${highlightText(
-      io.proxyInputFileName + ".json",
-      "yellow"
-    )} file with the signed entries.`
-  );
-  console.log(
-    `The signed auth entries details will be saved as ${highlightText(
-      outputFormat === "raw"
-        ? "raw signature parameters"
-        : "encoded XDR entries",
-      "yellow"
-    )}.`
-  );
-
-  await updateAuthInProxyInputFile(io.proxyInputFileName, output);
-};
-
+// Function to verify the root invocation of an authorization entry
+// and ensure it matches the expected contract, function, and arguments
+// provided in the input. This ensures the entry is valid for the intended
+// transaction invocation and haven't been tampered with.
 const verifyRootInvocation = (
   entry: xdr.SorobanAuthorizationEntry,
   contractAddress: string,
@@ -268,17 +227,55 @@ const verifyRootInvocation = (
   }
 };
 
+const outputSignedEntries = async (
+  signedEntries: xdr.SorobanAuthorizationEntry[]
+) => {
+  let output: ProxyAuthInput[];
+
+  if (outputFormat === "raw") {
+    output = signedEntries.map(
+      (entry) =>
+        ({
+          signature: entry.credentials().address().signature().toXDR("base64"),
+          nonce: entry.credentials().address().nonce().toString(),
+          signatureExpirationLedger: entry
+            .credentials()
+            .address()
+            .signatureExpirationLedger(),
+        } as ProxyAuthInputRaw)
+    );
+  } else {
+    output = signedEntries.map(
+      (entry) =>
+        ({
+          authEntryXdr: entry.toXDR("base64"),
+        } as ProxyAuthInputXdr)
+    );
+  }
+
+  console.log(
+    ` ${highlightText(
+      output.length.toString(),
+      "yellow"
+    )} auth entries were signed. `
+  );
+  console.log(
+    `Updating the ${highlightText(
+      io.proxyInputFileName + ".json",
+      "yellow"
+    )} file with the signed entries.`
+  );
+  console.log(
+    `The signed auth entries details will be saved as ${highlightText(
+      outputFormat === "raw"
+        ? "raw signature parameters"
+        : "encoded XDR entries",
+      "yellow"
+    )}.`
+  );
+
+  await updateAuthInProxyInputFile(io.proxyInputFileName, output);
+};
+
+// Run the main Airgapped workflow
 await runAirgapped();
-
-// const verifyEntriesXdr = (authEntriesXdr: string[]) => {
-//   const authEntries = [];
-
-//   for (const entryXdr of authEntriesXdr) {
-//     const entry = xdr.SorobanAuthorizationEntry.fromXDR(entryXdr, "base64");
-//     authEntries.push(entry);
-//   }
-
-//   return authEntries;
-// };
-
-// const entries = verifyEntriesXdr(authEntriesXdr);

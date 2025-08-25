@@ -84,10 +84,11 @@ console.log(
   )
 );
 
-if (fnName !== "swap")
-  throw new Error(`Invalid function name: ${fnName}. Expected: swap`);
-
+// Main workflow that executes when Proxy runs
 const runProxy = async () => {
+  if (fnName !== "swap")
+    throw new Error(`Invalid function name: ${fnName}. Expected: swap`);
+
   // Assemble a simple transaction based on the
   // invocation parameters provided. This object
   // has no explicit authorization entries
@@ -117,33 +118,37 @@ const runProxy = async () => {
     return;
   }
 
+  // Get just the entries that need to be signed from the simulation
   const requiredAuthEntries = getRequiredAuthorizationEntries(
     simulatedAuthEntries
   ) as xdr.SorobanAuthorizationEntry[];
 
+  // Load the authorization provided in the input file
+  // and reassemble the authorized objects
   const authorizedEntries = loadAuthorizedEntries(
     authInput,
     requiredAuthEntries
   );
 
+  // Assemble the transaction with the authorized entries
   const txWithEntries = await assembleTransaction(authorizedEntries);
 
+  // Prepare the transaction for submission. This step includes
+  // a simulation step, which will verify if the transaction
+  // with the authorized entries won't fail.
+  // Afterwards, an updated transaction object is returned with
+  // the results of the simulation.
   const preparedTx = await rpc.prepareTransaction(txWithEntries);
 
+  // Sign the transaction object with the source account.
+  // This is handled directly in the proxy as a low-risk
+  // account is used for this purpose.
   preparedTx.sign(proxyKeypair);
 
   console.log("Signed Transaction:\n\n", preparedTx.toXDR(), "\n\n");
 
+  // Save the signed transaction XDR to a file
   saveTransactionXdr(preparedTx.toXDR());
-
-  // const suggestedExpirationLedger = await getExpirationLedger(600);
-
-  // const authEntriesParams = getAuthorizationEntries(
-  //   simulation,
-  //   suggestedExpirationLedger
-  // );
-
-  // const authorizedEntries = isBuildPhase ? undefined : loadAuthorizedEntries();
 };
 
 // Function that constructs the transaction object
@@ -311,6 +316,8 @@ const reviewAndOutputAuthorizationRequirements = async (
   );
 };
 
+// Load the authorized entries from the air- input file
+// and assemble the authorized objects
 const loadAuthorizedEntries = (
   authInput: ProxyAuthInput[],
   requiredAuthEntries?: xdr.SorobanAuthorizationEntry[]
@@ -320,6 +327,10 @@ const loadAuthorizedEntries = (
   let index = -1;
   for (const signedEntry of authInput) {
     index++;
+
+    // Check if the entry is in XDR format
+    // In this case, we just need to decode the XDR
+    // as it contains the entire signed object
     const signedEntryXdr = (signedEntry as ProxyAuthInputXdr).authEntryXdr;
     if (signedEntryXdr) {
       loadedEntries.push(
@@ -328,6 +339,9 @@ const loadAuthorizedEntries = (
       continue;
     }
 
+    // When not in XDR format, we need to parse the raw parameters
+    // and reassemble the object based on the objects provided
+    // by the simulation.
     const signedEntryRaw = signedEntry as ProxyAuthInputRaw;
 
     if (
@@ -342,15 +356,19 @@ const loadAuthorizedEntries = (
         throw new Error("Required authorization entries are missing.");
       }
 
+      // Convert the object to raw parameters so we can modify it
       const parsedRequiredEntry = authEntryToParams(requiredAuthEntries[index]);
 
+      // The authorization parts are added to the parsed object
       parsedRequiredEntry.credentials.signature = signedEntryRaw.signature;
       parsedRequiredEntry.credentials.nonce = signedEntryRaw.nonce;
       parsedRequiredEntry.credentials.signatureExpirationLedger =
         signedEntryRaw.signatureExpirationLedger;
-      const updatedEntry = paramsToAuthEntry(parsedRequiredEntry);
-      loadedEntries.push(updatedEntry);
 
+      // The object is then reassembled from the parameters
+      const updatedEntry = paramsToAuthEntry(parsedRequiredEntry);
+
+      loadedEntries.push(updatedEntry);
       continue;
     }
 
@@ -362,141 +380,5 @@ const loadAuthorizedEntries = (
   return loadedEntries;
 };
 
+// Run the proxy workflow
 await runProxy();
-
-// const tx = await assembleTransaction();
-
-// if (isBuildPhase) {
-//   const simulation = (await rpc.simulateTransaction(
-//     tx
-//   )) as Api.SimulateTransactionSuccessResponse;
-
-//   const suggestedExpirationLedger = await getExpirationLedger(600);
-
-//   const authEntriesParams = getAuthorizationEntries(
-//     simulation,
-//     suggestedExpirationLedger
-//   );
-
-//   // const entries = simulation.result?.auth;
-//   // if (!entries || entries.length === 0) {
-//   //   throw new Error("No auth entries found in simulation");
-//   // }
-
-//   // Output the transaction and auth entries
-//   // console.log("Transaction XDR:", tx.toXDR());
-//   // console.log("Authorization Entries:", JSON.stringify(authEntries, null, 2));
-
-//   // const entriesXdr = entries.map((entry) => entry.toXDR("base64"));
-
-//   console.log("Authorization Entries:", authEntriesParams);
-
-//   const aigappedInput: AirGappedSignInput = {
-//     contractId,
-//     function: fnName,
-//     functionArgs,
-//     authEntries: authEntriesParams,
-//   };
-
-//   await saveToJsonFile<AirGappedSignInput>(
-//     aigappedInput,
-//     io.airGappedInputFileName
-//   );
-
-//   Deno.exit(0);
-// }
-
-// if (!isBuildPhase) {
-//   if (!authInput || authInput.length === 0)
-//     throw new Error("No signed auth entries provided for submission.");
-
-//   const simulation = (await rpc.simulateTransaction(
-//     tx
-//   )) as Api.SimulateTransactionSuccessResponse;
-
-//   const updatedEntries = [];
-//   let nextIndex = 0;
-//   for (const entry of simulation.result?.auth || []) {
-//     if (
-//       entry.credentials().switch().name === "sorobanCredentialsSourceAccount"
-//     ) {
-//       updatedEntries.push(entry);
-//       continue; // Source account entry, no need to sign the entry individually
-//     }
-
-//     const entryParams = authEntryToParams(entry);
-
-//     console.log("Updating entry:", entryParams);
-//     entryParams.credentials.signature = signedAuthEntries[nextIndex].signature;
-//     entryParams.credentials.nonce = signedAuthEntries[nextIndex].nonce;
-//     entryParams.credentials.signatureExpirationLedger =
-//       signedAuthEntries[nextIndex].signatureExpirationLedger;
-//     console.log("Updated entry:", entryParams);
-
-//     const updatedEntry = paramsToAuthEntry(entryParams);
-
-//     updatedEntries.push(updatedEntry);
-
-//     nextIndex++;
-//   }
-
-//   const transactionData = simulation.transactionData.build();
-//   const resourceFee = Number(transactionData.resourceFee().toBigInt());
-//   const op = tx.toEnvelope().v1().tx().operations()[0];
-
-//   // Here we add the signed entries to the operation object
-//   const authorizedOperation = Operation.invokeHostFunction({
-//     func: op.body().invokeHostFunctionOp().hostFunction(),
-//     auth: updatedEntries,
-//   });
-
-//   // When a transaction object is assembled, the sequence is automatically bumped
-//   // to the next sequence number, so we need to ensure that the source account
-//   // sequence number is not bumped by the transaction builder again.
-//   const updatedSourceAccount = new Account(
-//     tx.source,
-//     (Number(tx.sequence) - 1).toString()
-//   );
-
-//   // The inclusion fee is the fee charged for including the transaction in a ledger
-//   const inclusionFee = tx.fee;
-
-//   const updatedTx = new TransactionBuilder(updatedSourceAccount, {
-//     fee: (inclusionFee + resourceFee).toString(),
-//     networkPassphrase: network,
-//     sorobanData: transactionData,
-//     timebounds: tx.timeBounds,
-//     minAccountSequence: tx.minAccountSequence,
-//     minAccountSequenceAge: tx.minAccountSequenceAge,
-//     minAccountSequenceLedgerGap: tx.minAccountSequenceLedgerGap,
-//   });
-
-//   updatedTx.addOperation(authorizedOperation);
-
-//   const finalTx = updatedTx.build();
-
-//   const preparedTx = await rpc.prepareTransaction(finalTx);
-
-//   preparedTx.sign(proxyKeypair);
-
-//   console.log("Signed Transaction:\n\n", preparedTx.toXDR(), "\n\n");
-
-//   saveTransactionXdr(preparedTx.toXDR());
-// }
-
-// // const { step } = args;
-
-// // if (!step) {
-// //   console.error(
-// //     "No step provided in args, make sure to inclue a '--step=<step>' argument"
-// //   );
-// //   console.error(
-// //     "Available steps: \n 'build': Builds a transaction and outputs the auth entries to be authorized by the air-gapped secure account. \n 'send': Receives the signed auth entry and completes the transaction."
-// //   );
-
-// //   Deno.exit(1);
-// // }
-
-// // if (step === "build") {
-
-// // }
